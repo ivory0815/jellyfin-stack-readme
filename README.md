@@ -1,76 +1,73 @@
-# 🎬 Jellyfin Stack – NFS-Mount + Auto-Watchdog + Monitoring
+# 📦 Docker Media Stack – NFS Mount + Auto-Watchdog + Monitoring
 
-![Jellyfin](https://img.shields.io/badge/Jellyfin-Docker-blueviolet?logo=docker)
-![Status](https://img.shields.io/badge/NFS%20Mount-stabil-success?style=flat-square)
-![Maintainer](https://img.shields.io/badge/Maintained%3F-yes-green)
-![License](https://img.shields.io/badge/license-private-informational)
-![macOS](https://img.shields.io/badge/macOS-supported-lightgrey?logo=apple)
+![Docker](https://img.shields.io/badge/Stack-Docker-blue?logo=docker)
+![NFS](https://img.shields.io/badge/NFS--Mount-Enabled-brightgreen)
+![License](https://img.shields.io/badge/license-private-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-macOS-lightblue)
 
-> 🧪 Privates Medienserver-Setup mit automatisiertem NFS-Mount, Watchdog, Self-Healing & Monitoring – speziell für macOS + Docker!
+> 🧪 Medienserver-Setup mit automatisiertem NFS-Mount, Watchdog, Self-Healing & Monitoring – entwickelt für Docker-Umgebungen.
 
 ---
 
-## 📦 Docker-Container
+## Dienste
 
 | Dienst        | Port    | Zweck                          |
 |---------------|---------|-------------------------------|
-| `jellyfin`    | 8787    | Medienserver (Docker)         |
-| `caddy`       | 80/443  | TLS Reverse Proxy (`stream.mediaqualle.de`) |
-| `glances`     | 61208   | Systemüberwachung              |
-| `uptime-kuma` | 3001    | Statusmonitor für Container   |
+| `media-server`| 8787    | Medienserver (z. B. Jellyfin) |
+| `reverse-proxy`| 80/443 | TLS Reverse Proxy (z. B. Caddy) |
+| `metrics`     | 61208   | Systemüberwachung              |
+| `status-page` | 3001    | Dienstmonitoring               |
 
-**Stack-Start:**
+Start:
 
 ```bash
-~/docker/start.sh
+./start.sh
 ```
 
 ---
 
-## 🧭 Deployment-Flow
+## Deployment-Flow (Mermaid)
 
 ```mermaid
 graph TD
-  A[macOS Start/Login] --> B[LaunchAgent: mount_watchdog.sh]
+  A[Systemstart] --> B[Watchdog]
   B --> C{NAS erreichbar?}
   C -- Nein --> D[Abbruch / log]
-  C -- Ja --> E{NFS-Mount da?}
-  E -- Nein --> F["mount_nfs optimiert"]
-  F --> G{Mount ok?}
-  G -- Nein --> H["docker-compose down + start.sh"]
+  C -- Ja --> E{Mount vorhanden?}
+  E -- Nein --> F["mount_nfs"]
+  F --> G{Erfolg?}
+  G -- Nein --> H["Stack neu starten"]
   G -- Ja --> I[done]
   E -- Ja --> I
 ```
 
 ---
 
-## ⚙️ Automatisierung
+## Automatisierung
 
-### 🕓 Crontab
+### Crontab
 
 ```cron
-*/5 * * * * /Users/macosserver/docker/mount_watchdog.sh >> /Users/macosserver/docker/logs/watchdog.log 2>&1
-0 20 * * * /Users/macosserver/docker/backup_jellyfin_config.sh >> /Users/macosserver/docker/backup.log 2>&1
-0 20 * * 0 /Users/macosserver/docker/watchtower.sh >> /Users/macosserver/docker/watchtower.log 2>&1
+*/5 * * * * /pfad/zum/watchdog.sh >> /pfad/zum/logs/watchdog.log 2>&1
+0 20 * * * /pfad/zum/backup.sh >> /pfad/zum/logs/backup.log 2>&1
+0 20 * * 0 /pfad/zum/watchtower.sh >> /pfad/zum/logs/watchtower.log 2>&1
 ```
 
-### 🖥 macOS LaunchAgent
+### LaunchAgent (macOS)
 
 ```bash
-~/Library/LaunchAgents/com.mediaqualle.mountwatchdog.plist
+~/Library/LaunchAgents/com.stack.mountwatchdog.plist
 ```
-
-→ startet `mount_watchdog.sh` automatisch beim Login
 
 ---
 
-## 📂 NFS-Mount
+## NFS-Mount-Konfiguration
 
-- **NAS:** `akira4800.local` (`10.0.10.245`)
-- **Export:** `/volume1/Media`
-- **Mountpoint:** `/Users/macosserver/docker_mounts/medien`
+- **Server:** `<nas-hostname>`
+- **Export:** `/volume/media`
+- **Client-Mountpoint:** `/pfad/zum/mount`
 
-**Mount-Optionen (resilient & performant):**
+**Optionen:**
 
 ```bash
 -o resvport,rsize=65536,wsize=65536,async -P
@@ -78,77 +75,68 @@ graph TD
 
 ---
 
-## 🛡 Watchdog-Verhalten
+## Watchdog-Skript
 
 **Pfad:**
 
 ```bash
-~/docker/mount_watchdog.sh
+./watchdog.sh
 ```
 
-**Funktionen:**
+**Funktion:**
 
-- Pingt das NAS
-- Prüft NFS-Mount
-- Remount-Versuch
-- `docker compose down` & Stack-Neustart bei Problem
+- Prüft NAS-Verfügbarkeit
+- Mountprüfung & -versuch
+- Stack-Neustart bei Fehlern
 
-**Logfile:**
+---
+
+## Backup & Updates
+
+- Backup-Skript: `backup.sh`
+- Watchtower-Update-Skript: `watchtower.sh`
+
+Log-Ausgaben:
 
 ```bash
-~/docker/logs/watchdog.log
+./logs/backup.log
+./logs/watchtower.log
 ```
 
 ---
 
-## 💾 Backup & Maintenance
-
-- **Tägliches Backup:** `backup_jellyfin_config.sh`
-- **Wöchentliche Updates:** `watchtower.sh`
-
-**Logdateien:**
-
-```bash
-~/docker/backup.log
-~/docker/watchtower.log
-```
-
----
-
-## 🧪 Troubleshooting Quicklist
+## Troubleshooting
 
 | Problem              | Lösung                               |
 |----------------------|----------------------------------------|
-| Medien fehlen        | `mount | grep medien`                  |
-| NAS offline          | `ping 10.0.10.245`                     |
-| Jellyfin hängt       | `docker restart jellyfin`              |
-| Komplett neu starten | `~/docker/start.sh`                   |
-| Watchdog-Log prüfen  | `tail -f ~/docker/logs/watchdog.log`  |
+| Medien fehlen        | `mount | grep <mountpoint>`            |
+| NAS offline          | `ping <NAS-IP>`                        |
+| Server hängt         | `docker restart <container>`          |
+| Stack neu starten    | `./start.sh`                           |
+| Log prüfen           | `tail -f ./logs/watchdog.log`         |
 
 ---
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```bash
-~/docker/
-├── jellyfin/
-│   ├── docker-compose.yml
-│   ├── Caddyfile
-│   ├── glances.conf
-│   └── uptime-kuma-data/
-├── mount_watchdog.sh
+/media-stack/
+├── docker-compose.yml
+├── Caddyfile
+├── glances.conf
+├── status-data/
+├── watchdog.sh
 ├── start.sh
 ├── logs/
 │   └── watchdog.log
-├── backup_jellyfin_config.sh
+├── backup.sh
 ├── watchtower.sh
 ├── README.md
 ```
 
 ---
 
-## 🔒 Lizenz
+## Lizenz
 
 Dieses Repository ist **privat**.  
-Keine Weitergabe oder öffentliche Nutzung vorgesehen.  
-Für Anpassungen oder Hilfe – einfach melden.
+Keine Weitergabe oder öffentliche Nutzung vorgesehen.

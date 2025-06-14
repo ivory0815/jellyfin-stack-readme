@@ -1,5 +1,5 @@
 # 📦 Docker Media Stack – NFS Mount + Auto-Watchdog + Monitoring
-![Jellyfin Banner](jellyfin-banner-catppuccin.png)
+![Jellyfin Banner](jellyfin-banner.png)
 ![Docker](https://img.shields.io/badge/Stack-Docker-blue?logo=docker)
 ![NFS](https://img.shields.io/badge/NFS--Mount-Enabled-brightgreen)
 ![License](https://img.shields.io/badge/license-private-lightgrey)

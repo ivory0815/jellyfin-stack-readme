@@ -1,0 +1,7 @@
+media.example.com {
+    reverse_proxy media-server:8096
+}
+
+status.example.com {
+    reverse_proxy status-page:3001
+}

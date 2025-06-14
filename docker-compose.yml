@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  media-server:
+    image: jellyfin/jellyfin:latest
+    container_name: media-server
+    ports:
+      - "8787:8096"
+    volumes:
+      - ./config:/config
+      - ./media:/media:ro
+    restart: unless-stopped
+
+  reverse-proxy:
+    image: caddy:latest
+    container_name: reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - media-server
+
+  metrics:
+    image: nicolargo/glances:latest
+    container_name: metrics
+    ports:
+      - "61208:61208"
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  status-page:
+    image: louislam/uptime-kuma:latest
+    container_name: status-page
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./status-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
